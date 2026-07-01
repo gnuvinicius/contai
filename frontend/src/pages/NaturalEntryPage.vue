@@ -1,24 +1,15 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { toast } from 'vue-sonner'
-import { SparklesIcon, LoaderCircleIcon } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { parseNaturalLanguageEntry } from '@/services/nlp'
 import { useFinanceStore } from '@/stores/finance'
-import type { ParsedTransactionInput } from '@/types/finance'
+import type { ExtractedTransactionResponse } from '@/types/finance'
+import { CheckCircle2Icon, LoaderCircleIcon, SparklesIcon } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { toast } from 'vue-sonner'
 
 const finance = useFinanceStore()
 
@@ -30,15 +21,21 @@ const examples = [
 
 const prompt = ref('')
 const parsing = ref(false)
-const parsed = ref<ParsedTransactionInput | null>(null)
+const created = ref<ExtractedTransactionResponse | null>(null)
 
-const form = reactive<ParsedTransactionInput>({
-  amount: 0,
-  category: 'Outros',
-  type: 'Despesa',
-  date: new Date().toISOString(),
-  paymentMethod: 'Pix',
-  description: '',
+const resultSummary = computed(() => {
+  if (!created.value) return []
+
+  const response = created.value.response as Record<string, unknown>
+
+  return [
+    { label: 'Descricao', value: String(response.description ?? '-') },
+    { label: 'Estabelecimento', value: String(response.merchant_name ?? response.merchantName ?? '-') },
+    { label: 'Tipo', value: String(response.type ?? '-') },
+    { label: 'Valor', value: String(response.amount ?? '-') },
+    { label: 'Data', value: String(response.due_date ?? response.dueDate ?? '-') },
+    { label: 'Pagamento', value: String(response.payment_method ?? response.paymentMethod ?? '-') },
+  ]
 })
 
 function applyExample(text: string) {
@@ -52,13 +49,13 @@ async function processEntry() {
   }
 
   parsing.value = true
-  parsed.value = null
+  created.value = null
 
   try {
     const result = await parseNaturalLanguageEntry(prompt.value)
-    parsed.value = result
-    Object.assign(form, result)
-    toast.success('Interpretacao pronta. Revise os campos antes de salvar.')
+    created.value = result
+    await finance.loadTransactions(true)
+    toast.success('Movimentacao criada com sucesso.')
   } catch {
     toast.error('Nao foi possivel processar a entrada agora.')
   } finally {
@@ -66,29 +63,9 @@ async function processEntry() {
   }
 }
 
-function saveEntry() {
-  finance.addTransaction({ ...form })
-  toast.success('Movimentacao salva com sucesso.')
-  prompt.value = ''
-  parsed.value = null
-}
-
-function cancelEntry() {
-  parsed.value = null
-  toast.info('Edicao cancelada.')
-}
-
 function newEntry() {
   prompt.value = ''
-  parsed.value = null
-  Object.assign(form, {
-    amount: 0,
-    category: 'Outros',
-    type: 'Despesa',
-    date: new Date().toISOString(),
-    paymentMethod: 'Pix',
-    description: '',
-  })
+  created.value = null
 }
 </script>
 
@@ -99,7 +76,7 @@ function newEntry() {
         <CardTitle class="flex items-center gap-2 text-xl">
           <SparklesIcon class="size-5 text-primary" /> Entrada por Linguagem Natural
         </CardTitle>
-        <CardDescription>Descreva sua movimentacao financeira...</CardDescription>
+        <CardDescription>Descreva a movimentacao. O backend interpreta e cria o registro na base.</CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
         <Textarea
@@ -135,66 +112,21 @@ function newEntry() {
         </CardContent>
       </Card>
 
-      <Card v-else-if="parsed" key="result" class="border-border/70 bg-card/80">
+      <Card v-else-if="created" key="result" class="border-border/70 bg-card/80">
         <CardHeader>
-          <CardTitle>Interpretacao da IA</CardTitle>
-          <CardDescription>Edite os campos se necessario antes de confirmar.</CardDescription>
+          <CardTitle class="flex items-center gap-2"><CheckCircle2Icon class="size-5 text-emerald-400" /> Movimentacao criada</CardTitle>
+          <CardDescription>A resposta abaixo veio do backend e a lista foi atualizada.</CardDescription>
         </CardHeader>
         <CardContent class="grid gap-4 md:grid-cols-2">
-          <div class="space-y-2">
-            <Label for="amount">Valor</Label>
-            <Input id="amount" v-model.number="form.amount" type="number" min="0" step="0.01" />
-          </div>
-
-          <div class="space-y-2">
-            <Label for="category">Categoria</Label>
-            <Input id="category" v-model="form.category" />
-          </div>
-
-          <div class="space-y-2">
-            <Label>Tipo</Label>
-            <Select v-model="form.type">
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Receita">Receita</SelectItem>
-                <SelectItem value="Despesa">Despesa</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="space-y-2">
-            <Label for="date">Data</Label>
-            <Input id="date" v-model="form.date" type="datetime-local" />
-          </div>
-
-          <div class="space-y-2 md:col-span-2">
-            <Label>Forma de pagamento</Label>
-            <Select v-model="form.paymentMethod">
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Pix">Pix</SelectItem>
-                <SelectItem value="Cartao de Credito">Cartao de Credito</SelectItem>
-                <SelectItem value="Cartao de Debito">Cartao de Debito</SelectItem>
-                <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div class="space-y-2 md:col-span-2">
-            <Label for="description">Descricao</Label>
-            <Textarea id="description" v-model="form.description" class="min-h-28" />
+          <div v-for="item in resultSummary" :key="item.label" class="rounded-2xl border border-border/70 bg-secondary/40 p-4">
+            <p class="text-xs uppercase tracking-[0.25em] text-muted-foreground">{{ item.label }}</p>
+            <p class="mt-2 text-sm font-medium text-foreground">{{ item.value }}</p>
           </div>
         </CardContent>
         <Separator class="bg-border/80" />
         <CardFooter class="justify-end gap-2 pt-4">
-          <Button variant="ghost" @click="cancelEntry">Cancelar</Button>
           <Button variant="outline" @click="newEntry">Nova entrada</Button>
-          <Button @click="saveEntry">Salvar</Button>
+          <Button @click="finance.loadTransactions(true).then(() => toast.success('Lista atualizada.'))">Recarregar lista</Button>
         </CardFooter>
       </Card>
     </Transition>

@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { Wallet2Icon } from '@lucide/vue'
+import { navItems } from '@/components/layout/nav-items'
+import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { navItems } from '@/components/layout/nav-items'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth'
+import { LogOutIcon, Wallet2Icon } from '@lucide/vue'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const currentPath = computed(() => route.path)
 </script>
@@ -45,8 +49,14 @@ const currentPath = computed(() => route.path)
       </nav>
     </ScrollArea>
 
-    <div class="rounded-xl border border-border/80 bg-secondary/60 p-3 text-xs text-muted-foreground">
-      Organize receitas e despesas com entrada inteligente em linguagem natural.
+    <div class="mt-4 space-y-3 rounded-xl border border-border/80 bg-secondary/60 p-3 text-xs text-muted-foreground">
+      <div>
+        <p class="text-foreground">{{ auth.displayName }}</p>
+        <p class="mt-1">Roles: {{ auth.roles.join(', ') || 'user' }}</p>
+      </div>
+      <Button variant="outline" size="sm" class="w-full justify-start gap-2" @click="auth.logout(); router.push('/login')">
+        <LogOutIcon class="size-4" /> Sair
+      </Button>
     </div>
   </aside>
 </template>

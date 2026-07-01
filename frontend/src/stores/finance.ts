@@ -1,73 +1,108 @@
-import { computed, ref } from 'vue'
-import { defineStore } from 'pinia'
+import { ApiError, apiRequest } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import type { ParsedTransactionInput, Transaction } from '@/types/finance'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
-const initialTransactions: Transaction[] = [
-  {
-    id: 't1',
-    date: '2026-06-02T10:00:00.000Z',
-    description: 'Salario mensal',
-    category: 'Renda',
-    type: 'Receita',
-    amount: 8500,
-    paymentMethod: 'Transferencia',
-  },
-  {
-    id: 't2',
-    date: '2026-06-03T19:10:00.000Z',
-    description: 'Supermercado Central',
-    category: 'Alimentacao',
-    type: 'Despesa',
-    amount: 620,
-    paymentMethod: 'Pix',
-  },
-  {
-    id: 't3',
-    date: '2026-06-08T08:20:00.000Z',
-    description: 'Plano de internet',
-    category: 'Moradia',
-    type: 'Despesa',
-    amount: 139.9,
-    paymentMethod: 'Cartao de Credito',
-  },
-  {
-    id: 't4',
-    date: '2026-06-12T12:45:00.000Z',
-    description: 'Corridas de aplicativo',
-    category: 'Transporte',
-    type: 'Despesa',
-    amount: 184,
-    paymentMethod: 'Cartao de Debito',
-  },
-  {
-    id: 't5',
-    date: '2026-06-17T14:20:00.000Z',
-    description: 'Freela produto digital',
-    category: 'Renda Extra',
-    type: 'Receita',
-    amount: 1800,
-    paymentMethod: 'Pix',
-  },
-  {
-    id: 't6',
-    date: '2026-06-20T20:30:00.000Z',
-    description: 'Assinatura streaming',
-    category: 'Assinaturas',
-    type: 'Despesa',
-    amount: 59.9,
-    paymentMethod: 'Cartao de Credito',
-  },
-]
+interface TransactionApiResponse {
+  count: number
+  next: string | null
+  previous: string | null
+  results: Array<{
+    id: number | string
+    user: number | string
+    status: string
+    type: string
+    description: string
+    merchantName: string | null
+    amount: number | string
+    totalAmount: number | string
+    currency: string
+    paymentMethod: string | null
+    isInstallment: boolean
+    installment: number | string | null
+    installmentTotal: number | string | null
+    dueDate: string
+    createdAt?: string
+    updatedAt?: string | null
+  }>
+}
 
-function makeId() {
-  return Math.random().toString(36).slice(2, 10)
+function toNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return 0
+  return Number(value)
+}
+
+function toNullableNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return null
+  return Number(value)
+}
+
+function isIncomeType(value: string) {
+  return /receita|income|credit/i.test(value)
+}
+
+function normalizeTransaction(item: TransactionApiResponse['results'][number]): Transaction {
+  return {
+    id: Number(item.id),
+    user: Number(item.user),
+    status: item.status,
+    type: item.type,
+    description: item.description,
+    merchantName: item.merchantName ?? null,
+    amount: toNumber(item.amount),
+    totalAmount: toNumber(item.totalAmount),
+    currency: item.currency,
+    paymentMethod: item.paymentMethod ?? null,
+    isInstallment: item.isInstallment,
+    installment: toNullableNumber(item.installment),
+    installmentTotal: toNullableNumber(item.installmentTotal),
+    dueDate: item.dueDate,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  }
+}
+
+function normalizePayload(payload: ParsedTransactionInput) {
+  return {
+    type: payload.type,
+    description: payload.description,
+    merchantName: payload.merchantName,
+    amount: payload.amount,
+    isInstallment: payload.isInstallment,
+    installment: payload.installment,
+    installmentTotal: payload.installmentTotal,
+    dueDate: payload.dueDate,
+  }
+}
+
+async function requestWithAuthRetry<T>(request: () => Promise<T>) {
+  const auth = useAuthStore()
+
+  try {
+    return await request()
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      const refreshed = await auth.refreshSession().catch(() => false)
+      if (refreshed) {
+        return await request()
+      }
+
+      auth.logout()
+    }
+
+    throw error
+  }
 }
 
 export const useFinanceStore = defineStore('finance', () => {
-  const transactions = ref<Transaction[]>(initialTransactions)
+  const transactions = ref<Transaction[]>([])
+  const loading = ref(false)
+  const loaded = ref(false)
+  const error = ref<string | null>(null)
 
   const sortedTransactions = computed(() => {
-    return [...transactions.value].sort((a, b) => +new Date(b.date) - +new Date(a.date))
+    return [...transactions.value].sort((a, b) => +new Date(b.dueDate) - +new Date(a.dueDate))
   })
 
   const currentMonth = computed(() => new Date().getMonth())
@@ -75,39 +110,43 @@ export const useFinanceStore = defineStore('finance', () => {
 
   const monthTransactions = computed(() => {
     return transactions.value.filter((item) => {
-      const date = new Date(item.date)
+      const date = new Date(item.dueDate)
       return date.getMonth() === currentMonth.value && date.getFullYear() === currentYear.value
     })
   })
 
   const monthRevenue = computed(() => {
     return monthTransactions.value
-      .filter((item) => item.type === 'Receita')
+      .filter((item) => isIncomeType(item.type))
       .reduce((acc, item) => acc + item.amount, 0)
   })
 
   const monthExpense = computed(() => {
     return monthTransactions.value
-      .filter((item) => item.type === 'Despesa')
+      .filter((item) => !isIncomeType(item.type))
       .reduce((acc, item) => acc + item.amount, 0)
   })
 
   const totalBalance = computed(() => {
-    return transactions.value.reduce((acc, item) => acc + (item.type === 'Receita' ? item.amount : -item.amount), 0)
+    return transactions.value.reduce(
+      (acc, item) => acc + (isIncomeType(item.type) ? item.amount : -item.amount),
+      0,
+    )
   })
 
   const monthlySavings = computed(() => monthRevenue.value - monthExpense.value)
 
-  const monthlyByCategory = computed(() => {
+  const expensesByPaymentMethod = computed(() => {
     const buckets = new Map<string, number>()
-    monthTransactions.value
-      .filter((item) => item.type === 'Despesa')
+
+    transactions.value
+      .filter((item) => !isIncomeType(item.type))
       .forEach((item) => {
-        const current = buckets.get(item.category) ?? 0
-        buckets.set(item.category, current + item.amount)
+        const label = item.paymentMethod ?? 'Nao informado'
+        buckets.set(label, (buckets.get(label) ?? 0) + item.amount)
       })
 
-    return [...buckets.entries()].map(([category, value]) => ({ category, value }))
+    return [...buckets.entries()].map(([label, value]) => ({ label, value }))
   })
 
   const monthlyBars = computed(() => {
@@ -118,8 +157,8 @@ export const useFinanceStore = defineStore('finance', () => {
     })
 
     transactions.value.forEach((item) => {
-      if (item.type !== 'Despesa') return
-      const date = new Date(item.date)
+      if (isIncomeType(item.type)) return
+      const date = new Date(item.dueDate)
       const key = date.toLocaleDateString('pt-BR', { month: 'short' })
       const target = bars.find((bar) => bar.label === key)
       if (target) target.expense += item.amount
@@ -129,32 +168,84 @@ export const useFinanceStore = defineStore('finance', () => {
     return bars.map((bar) => ({ ...bar, percent: Math.round((bar.expense / max) * 100) }))
   })
 
-  function addTransaction(payload: ParsedTransactionInput) {
-    transactions.value.unshift({
-      id: makeId(),
-      ...payload,
-    })
+  async function loadTransactions(force = false) {
+    if (loaded.value && !force) return transactions.value
+
+    loading.value = true
+    error.value = null
+
+    try {
+      const collected: Transaction[] = []
+      let next: string | null = '/transactions/?page=1'
+
+      while (next) {
+        const response = await requestWithAuthRetry(() => apiRequest<TransactionApiResponse>(next as string))
+        collected.push(...response.results.map(normalizeTransaction))
+        next = response.next
+      }
+
+      transactions.value = collected
+      loaded.value = true
+      return transactions.value
+    } catch (error_) {
+      const message = error_ instanceof ApiError ? error_.message : 'Nao foi possivel carregar as movimentacoes.'
+      error.value = message
+      throw error_
+    } finally {
+      loading.value = false
+    }
   }
 
-  function updateTransaction(id: string, payload: ParsedTransactionInput) {
-    const idx = transactions.value.findIndex((item) => item.id === id)
-    if (idx === -1) return
-    transactions.value[idx] = { ...transactions.value[idx], ...payload }
+  async function addTransaction(payload: ParsedTransactionInput) {
+    const response = await requestWithAuthRetry(() =>
+      apiRequest<TransactionApiResponse['results'][number]>('/transactions/', {
+        method: 'POST',
+        body: JSON.stringify(normalizePayload(payload)),
+      }),
+    )
+
+    const item = normalizeTransaction(response)
+    transactions.value = [item, ...transactions.value.filter((transaction) => transaction.id !== item.id)]
+    loaded.value = true
+    return item
   }
 
-  function removeTransaction(id: string) {
+  async function updateTransaction(id: number, payload: ParsedTransactionInput) {
+    const response = await requestWithAuthRetry(() =>
+      apiRequest<TransactionApiResponse['results'][number]>(`/transactions/${id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(normalizePayload(payload)),
+      }),
+    )
+
+    const updated = normalizeTransaction(response)
+    transactions.value = transactions.value.map((item) => (item.id === updated.id ? updated : item))
+    return updated
+  }
+
+  async function removeTransaction(id: number) {
+    await requestWithAuthRetry(() =>
+      apiRequest<void>(`/transactions/${id}/`, {
+        method: 'DELETE',
+      }),
+    )
+
     transactions.value = transactions.value.filter((item) => item.id !== id)
   }
 
   return {
     transactions,
+    loading,
+    loaded,
+    error,
     sortedTransactions,
     monthRevenue,
     monthExpense,
     totalBalance,
     monthlySavings,
-    monthlyByCategory,
+    expensesByPaymentMethod,
     monthlyBars,
+    loadTransactions,
     addTransaction,
     updateTransaction,
     removeTransaction,

@@ -1,8 +1,10 @@
 import {
   LayoutDashboardIcon,
+  LogInIcon,
   ReceiptTextIcon,
-  SparklesIcon,
   SettingsIcon,
+  SparklesIcon,
+  UserPlusIcon,
 } from '@lucide/vue'
 
 export const navItems = [
@@ -10,4 +12,9 @@ export const navItems = [
   { label: 'Despesas', to: '/despesas', icon: ReceiptTextIcon },
   { label: 'Nova Entrada', to: '/nova-entrada', icon: SparklesIcon },
   { label: 'Configuracoes', to: '/configuracoes', icon: SettingsIcon },
+]
+
+export const authNavItems = [
+  { label: 'Entrar', to: '/login', icon: LogInIcon },
+  { label: 'Criar conta', to: '/register', icon: UserPlusIcon },
 ]

@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { MenuIcon } from '@lucide/vue'
 import SidebarNav from '@/components/layout/SidebarNav.vue'
 import TopBar from '@/components/layout/TopBar.vue'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { useAuthStore } from '@/stores/auth'
+import { useFinanceStore } from '@/stores/finance'
+import { MenuIcon } from '@lucide/vue'
+import { onMounted, ref } from 'vue'
 
 const open = ref(false)
+const auth = useAuthStore()
+const finance = useFinanceStore()
+
+onMounted(() => {
+  if (auth.isAuthenticated) {
+    finance.loadTransactions().catch(() => undefined)
+  }
+})
 </script>
 
 <template>

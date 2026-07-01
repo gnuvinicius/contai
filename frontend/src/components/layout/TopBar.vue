@@ -1,30 +1,47 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { SearchIcon, BellIcon, LogOutIcon, UserRoundIcon, Settings2Icon } from '@lucide/vue'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbLink,
+    BreadcrumbList,
+    BreadcrumbPage,
+    BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { useAuthStore } from '@/stores/auth'
+import { BellIcon, LogOutIcon, SearchIcon, Settings2Icon, UserRoundIcon } from '@lucide/vue'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const title = computed(() => String(route.meta.title ?? 'Dashboard'))
+
+function initials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+}
+
+function logout() {
+  auth.logout()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -55,15 +72,15 @@ const title = computed(() => String(route.meta.title ?? 'Dashboard'))
             type="button"
           >
             <Avatar class="size-8">
-              <AvatarFallback class="bg-primary/25 text-xs text-primary">JO</AvatarFallback>
+              <AvatarFallback class="bg-primary/25 text-xs text-primary">{{ initials(auth.displayName) || 'U' }}</AvatarFallback>
             </Avatar>
-            <span class="hidden text-sm text-foreground sm:block">Joao</span>
+            <span class="hidden text-sm text-foreground sm:block">{{ auth.displayName }}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="w-56">
           <DropdownMenuLabel class="flex items-center justify-between">
             Minha Conta
-            <Badge variant="secondary" class="text-[10px]">PRO</Badge>
+            <Badge variant="secondary" class="text-[10px]">user</Badge>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>
@@ -73,7 +90,7 @@ const title = computed(() => String(route.meta.title ?? 'Dashboard'))
             <Settings2Icon class="mr-2 size-4" /> Preferencias
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem class="text-destructive">
+          <DropdownMenuItem class="text-destructive" @click="logout">
             <LogOutIcon class="mr-2 size-4" /> Sair
           </DropdownMenuItem>
         </DropdownMenuContent>

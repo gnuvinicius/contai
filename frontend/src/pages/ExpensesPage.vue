@@ -1,90 +1,86 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { toast } from 'vue-sonner'
 import {
-  ArrowUpDownIcon,
-  EyeIcon,
-  FilterIcon,
-  PencilLineIcon,
-  Trash2Icon,
-  SearchIcon,
-} from '@lucide/vue'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableEmpty,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableEmpty,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useFinanceStore } from '@/stores/finance'
 import type { ParsedTransactionInput, Transaction } from '@/types/finance'
+import { fromDateTimeLocal, toDateTimeLocal } from '@/utils/datetime'
 import { currency, dateLabel } from '@/utils/format'
+import {
+    ArrowUpDownIcon,
+    EyeIcon,
+    FilterIcon,
+    PencilLineIcon,
+    SearchIcon,
+    Trash2Icon,
+} from '@lucide/vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { toast } from 'vue-sonner'
 
 const finance = useFinanceStore()
 const loading = ref(true)
 
-onMounted(() => {
-  setTimeout(() => {
-    loading.value = false
-  }, 800)
+function isIncome(type: string) {
+  return /receita|income|credit/i.test(type)
+}
+
+onMounted(async () => {
+  await finance.loadTransactions()
+  loading.value = false
 })
 
 const filters = reactive({
   description: '',
   year: String(new Date().getFullYear()),
   type: 'Todos',
+  paymentMethod: 'Todos',
 })
 
 const sort = reactive({
-  field: 'date' as 'date' | 'description' | 'category' | 'type' | 'amount' | 'paymentMethod',
+  field: 'dueDate' as 'dueDate' | 'description' | 'merchantName' | 'type' | 'amount' | 'paymentMethod',
   direction: 'desc' as 'asc' | 'desc',
 })
 
@@ -96,26 +92,39 @@ const viewOpen = ref(false)
 const editOpen = ref(false)
 const deleteOpen = ref(false)
 
-const editForm = reactive<ParsedTransactionInput>({
+type EditForm = Omit<ParsedTransactionInput, 'merchantName'> & {
+  merchantName: string
+}
+
+const editForm = reactive<EditForm>({
   amount: 0,
-  category: 'Outros',
   type: 'Despesa',
-  date: new Date().toISOString(),
-  paymentMethod: 'Pix',
   description: '',
+  merchantName: '',
+  isInstallment: false,
+  installment: null,
+  installmentTotal: null,
+  dueDate: new Date().toISOString(),
+  paymentMethod: null,
 })
 
 const years = computed(() => {
-  const set = new Set(finance.transactions.map((item) => String(new Date(item.date).getFullYear())))
+  const set = new Set(finance.transactions.map((item) => String(new Date(item.dueDate).getFullYear())))
   return [String(new Date().getFullYear()), ...set]
+})
+
+const paymentMethods = computed(() => {
+  const set = new Set(finance.transactions.map((item) => item.paymentMethod ?? 'Nao informado'))
+  return ['Todos', ...set]
 })
 
 const filtered = computed(() => {
   return finance.sortedTransactions.filter((item) => {
     const matchDescription = item.description.toLowerCase().includes(filters.description.toLowerCase())
-    const matchYear = String(new Date(item.date).getFullYear()) === filters.year
+    const matchYear = String(new Date(item.dueDate).getFullYear()) === filters.year
     const matchType = filters.type === 'Todos' || item.type === filters.type
-    return matchDescription && matchYear && matchType
+    const matchPayment = filters.paymentMethod === 'Todos' || (item.paymentMethod ?? 'Nao informado') === filters.paymentMethod
+    return matchDescription && matchYear && matchType && matchPayment
   })
 })
 
@@ -123,8 +132,8 @@ const sorted = computed(() => {
   return [...filtered.value].sort((a, b) => {
     const modifier = sort.direction === 'asc' ? 1 : -1
     if (sort.field === 'amount') return (a.amount - b.amount) * modifier
-    if (sort.field === 'date') return (+new Date(a.date) - +new Date(b.date)) * modifier
-    return String(a[sort.field]).localeCompare(String(b[sort.field])) * modifier
+    if (sort.field === 'dueDate') return (+new Date(a.dueDate) - +new Date(b.dueDate)) * modifier
+    return String(a[sort.field] ?? '').localeCompare(String(b[sort.field] ?? '')) * modifier
   })
 })
 
@@ -132,6 +141,8 @@ const paginated = computed(() => {
   const start = (page.value - 1) * pageSize
   return sorted.value.slice(start, start + pageSize)
 })
+
+const totalPages = computed(() => Math.max(Math.ceil(sorted.value.length / pageSize), 1))
 
 function sortBy(field: typeof sort.field) {
   if (sort.field === field) {
@@ -149,15 +160,34 @@ function openView(item: Transaction) {
 
 function openEdit(item: Transaction) {
   selected.value = item
-  Object.assign(editForm, item)
+  Object.assign(editForm, {
+    amount: item.amount,
+    type: item.type,
+    description: item.description,
+    merchantName: item.merchantName ?? '',
+    isInstallment: item.isInstallment,
+    installment: item.installment,
+    installmentTotal: item.installmentTotal,
+    dueDate: toDateTimeLocal(item.dueDate),
+    paymentMethod: item.paymentMethod,
+  })
   editOpen.value = true
 }
 
-function saveEdit() {
+async function saveEdit() {
   if (!selected.value) return
-  finance.updateTransaction(selected.value.id, { ...editForm })
-  editOpen.value = false
-  toast.success('Despesa atualizada com sucesso.')
+
+  try {
+    await finance.updateTransaction(selected.value.id, {
+      ...editForm,
+      merchantName: editForm.merchantName.trim() || null,
+      dueDate: fromDateTimeLocal(editForm.dueDate),
+    })
+    editOpen.value = false
+    toast.success('Movimentacao atualizada com sucesso.')
+  } catch {
+    toast.error('Nao foi possivel atualizar a movimentacao.')
+  }
 }
 
 function askDelete(item: Transaction) {
@@ -165,11 +195,16 @@ function askDelete(item: Transaction) {
   deleteOpen.value = true
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!selected.value) return
-  finance.removeTransaction(selected.value.id)
-  deleteOpen.value = false
-  toast.success('Movimentacao excluida.')
+
+  try {
+    await finance.removeTransaction(selected.value.id)
+    deleteOpen.value = false
+    toast.success('Movimentacao excluida.')
+  } catch {
+    toast.error('Nao foi possivel excluir a movimentacao.')
+  }
 }
 </script>
 
@@ -213,11 +248,23 @@ function confirmDelete() {
               </SelectContent>
             </Select>
           </div>
+
+          <div class="space-y-2">
+            <Label>Forma de pagamento</Label>
+            <Select v-model="filters.paymentMethod">
+              <SelectTrigger>
+                <SelectValue placeholder="Forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="method in paymentMethods" :key="method" :value="method">{{ method }}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
 
-    <div v-if="loading" class="space-y-2">
+    <div v-if="loading || finance.loading" class="space-y-2">
       <Skeleton v-for="n in 6" :key="n" class="h-12 w-full rounded-xl" />
     </div>
 
@@ -226,12 +273,14 @@ function confirmDelete() {
         <TableHeader>
           <TableRow>
             <TableHead>
-              <button class="inline-flex items-center gap-1" @click="sortBy('date')">Data <ArrowUpDownIcon class="size-3.5" /></button>
+              <button class="inline-flex items-center gap-1" @click="sortBy('dueDate')">Data <ArrowUpDownIcon class="size-3.5" /></button>
             </TableHead>
             <TableHead>
               <button class="inline-flex items-center gap-1" @click="sortBy('description')">Descricao <ArrowUpDownIcon class="size-3.5" /></button>
             </TableHead>
-            <TableHead>Categoria</TableHead>
+            <TableHead>
+              <button class="inline-flex items-center gap-1" @click="sortBy('merchantName')">Estabelecimento <ArrowUpDownIcon class="size-3.5" /></button>
+            </TableHead>
             <TableHead>
               <button class="inline-flex items-center gap-1" @click="sortBy('type')">Tipo <ArrowUpDownIcon class="size-3.5" /></button>
             </TableHead>
@@ -244,125 +293,107 @@ function confirmDelete() {
         </TableHeader>
         <TableBody>
           <TableRow v-for="item in paginated" :key="item.id" class="transition-colors hover:bg-secondary/70">
-            <TableCell>{{ dateLabel(item.date) }}</TableCell>
+            <TableCell>{{ dateLabel(item.dueDate) }}</TableCell>
             <TableCell>{{ item.description }}</TableCell>
-            <TableCell>{{ item.category }}</TableCell>
+            <TableCell>{{ item.merchantName || '-' }}</TableCell>
             <TableCell>
-              <Badge :variant="item.type === 'Receita' ? 'secondary' : 'destructive'">{{ item.type }}</Badge>
+              <Badge :variant="isIncome(item.type) ? 'secondary' : 'destructive'">{{ item.type }}</Badge>
             </TableCell>
-            <TableCell class="font-medium" :class="item.type === 'Receita' ? 'text-emerald-400' : 'text-red-400'">
-              {{ item.type === 'Receita' ? '+' : '-' }}{{ currency(item.amount) }}
+            <TableCell class="font-medium" :class="isIncome(item.type) ? 'text-emerald-400' : 'text-red-400'">
+              {{ isIncome(item.type) ? '+' : '-' }}{{ currency(item.amount) }}
             </TableCell>
-            <TableCell>{{ item.paymentMethod }}</TableCell>
+            <TableCell>{{ item.paymentMethod || '-' }}</TableCell>
             <TableCell class="text-right">
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                   <Button size="icon-sm" variant="ghost">...</Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="w-40">
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <DropdownMenuItem @click="openView(item)">
-                        <EyeIcon class="mr-2 size-4" /> Visualizar
-                      </DropdownMenuItem>
-                    </TooltipTrigger>
-                    <TooltipContent>Detalhes da movimentacao</TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuItem @click="openEdit(item)">
-                    <PencilLineIcon class="mr-2 size-4" /> Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuItem class="text-destructive" @click="askDelete(item)">
-                    <Trash2Icon class="mr-2 size-4" /> Excluir
-                  </DropdownMenuItem>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem @click="openView(item)"><EyeIcon class="mr-2 size-4" /> Ver</DropdownMenuItem>
+                  <DropdownMenuItem @click="openEdit(item)"><PencilLineIcon class="mr-2 size-4" /> Editar</DropdownMenuItem>
+                  <DropdownMenuItem class="text-destructive" @click="askDelete(item)"><Trash2Icon class="mr-2 size-4" /> Excluir</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </TableCell>
           </TableRow>
-
-          <TableEmpty v-if="!paginated.length" :colspan="7" class="py-14 text-center">
-            <p class="text-sm text-muted-foreground">Nenhuma movimentacao encontrada para os filtros aplicados.</p>
-          </TableEmpty>
         </TableBody>
       </Table>
+
+      <div class="flex items-center justify-between gap-3 px-2 py-4">
+        <Button variant="outline" :disabled="page === 1" @click="page = Math.max(page - 1, 1)">Anterior</Button>
+        <span class="text-sm text-muted-foreground">Pagina {{ page }} de {{ totalPages }}</span>
+        <Button variant="outline" :disabled="page === totalPages" @click="page = Math.min(page + 1, totalPages)">Proxima</Button>
+      </div>
+
+      <div v-if="paginated.length === 0" class="px-4 pb-4">
+        <TableEmpty>Sem movimentacoes para os filtros atuais.</TableEmpty>
+      </div>
     </div>
 
-    <Pagination v-model:page="page" :items-per-page="pageSize" :total="sorted.length" :default-page="1" :sibling-count="1" show-edges>
-      <PaginationContent v-slot="{ items }" class="justify-end">
-        <PaginationPrevious />
-        <template v-for="(item, index) in items" :key="index">
-          <PaginationItem v-if="item.type === 'page'" :value="item.value" :is-active="item.value === page">
-            {{ item.value }}
-          </PaginationItem>
-          <PaginationEllipsis v-else :index="index" />
-        </template>
-        <PaginationNext />
-      </PaginationContent>
-    </Pagination>
-
     <Dialog v-model:open="viewOpen">
-      <DialogContent v-if="selected" class="sm:max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Detalhes da movimentacao</DialogTitle>
-          <DialogDescription>Visualize os dados registrados.</DialogDescription>
+          <DialogDescription>{{ selected?.description }}</DialogDescription>
         </DialogHeader>
-        <div class="grid grid-cols-2 gap-3 text-sm">
-          <p class="text-muted-foreground">Descricao</p><p>{{ selected.description }}</p>
-          <p class="text-muted-foreground">Categoria</p><p>{{ selected.category }}</p>
-          <p class="text-muted-foreground">Tipo</p><p>{{ selected.type }}</p>
-          <p class="text-muted-foreground">Valor</p><p>{{ currency(selected.amount) }}</p>
-          <p class="text-muted-foreground">Data</p><p>{{ dateLabel(selected.date) }}</p>
-          <p class="text-muted-foreground">Pagamento</p><p>{{ selected.paymentMethod }}</p>
+        <div class="space-y-2 text-sm">
+          <p><strong>Data:</strong> {{ selected && dateLabel(selected.dueDate) }}</p>
+          <p><strong>Valor:</strong> {{ selected && currency(selected.amount) }}</p>
+          <p><strong>Estabelecimento:</strong> {{ selected?.merchantName || '-' }}</p>
+          <p><strong>Tipo:</strong> {{ selected?.type }}</p>
+          <p><strong>Pagamento:</strong> {{ selected?.paymentMethod || '-' }}</p>
         </div>
       </DialogContent>
     </Dialog>
 
     <Dialog v-model:open="editOpen">
-      <DialogContent class="sm:max-w-xl">
+      <DialogContent class="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Editar movimentacao</DialogTitle>
-          <DialogDescription>Atualize os campos e salve.</DialogDescription>
+          <DialogDescription>Atualize os campos permitidos pela API.</DialogDescription>
         </DialogHeader>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="space-y-2">
+            <Label>Data</Label>
+            <Input v-model="editForm.dueDate" type="datetime-local" />
+          </div>
 
-        <div class="grid gap-3 md:grid-cols-2">
-          <div class="space-y-2 md:col-span-2">
+          <div class="space-y-2">
             <Label>Descricao</Label>
             <Input v-model="editForm.description" />
           </div>
+
           <div class="space-y-2">
-            <Label>Categoria</Label>
-            <Input v-model="editForm.category" />
+            <Label>Estabelecimento</Label>
+            <Input v-model="editForm.merchantName" />
           </div>
-          <div class="space-y-2">
-            <Label>Valor</Label>
-            <Input v-model.number="editForm.amount" type="number" min="0" step="0.01" />
-          </div>
+
           <div class="space-y-2">
             <Label>Tipo</Label>
             <Select v-model="editForm.type">
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Receita">Receita</SelectItem>
                 <SelectItem value="Despesa">Despesa</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
           <div class="space-y-2">
-            <Label>Pagamento</Label>
-            <Select v-model="editForm.paymentMethod">
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Pix">Pix</SelectItem>
-                <SelectItem value="Cartao de Credito">Cartao de Credito</SelectItem>
-                <SelectItem value="Cartao de Debito">Cartao de Debito</SelectItem>
-                <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                <SelectItem value="Transferencia">Transferencia</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Valor</Label>
+            <Input v-model.number="editForm.amount" type="number" min="0" step="0.01" />
+          </div>
+
+          <div class="space-y-2 flex items-center gap-3 self-end rounded-2xl border border-border/70 bg-secondary/40 px-4 py-3">
+            <input id="installment" v-model="editForm.isInstallment" type="checkbox" class="size-4 rounded border-border" />
+            <Label for="installment" class="mb-0">Parcelado</Label>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" @click="editOpen = false">Cancelar</Button>
+        <Separator class="bg-border/80" />
+        <DialogFooter class="justify-end gap-2 pt-4">
+          <Button variant="ghost" @click="editOpen = false">Cancelar</Button>
           <Button @click="saveEdit">Salvar</Button>
         </DialogFooter>
       </DialogContent>
@@ -373,14 +404,12 @@ function confirmDelete() {
         <AlertDialogHeader>
           <AlertDialogTitle>Excluir movimentacao?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acao nao pode ser desfeita. A movimentacao sera removida da listagem.
+            Esta acao muda o status no backend e remove o item da listagem.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction class="bg-destructive text-destructive-foreground hover:bg-destructive/90" @click="confirmDelete">
-            Excluir
-          </AlertDialogAction>
+          <AlertDialogAction @click="confirmDelete">Excluir</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
