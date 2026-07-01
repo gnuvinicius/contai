@@ -1,70 +1,39 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import { useAuthStore } from '@/stores/auth'
-
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/login',
-      name: 'login',
-      component: () => import('@/views/LoginView.vue'),
-      meta: { guestOnly: true },
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: () => import('@/views/RegisterView.vue'),
-      meta: { guestOnly: true },
-    },
-    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
-      meta: { requiresAuth: true },
       children: [
-        { path: '', redirect: '/dashboard' },
         {
-          path: 'dashboard',
+          path: '',
           name: 'dashboard',
-          component: () => import('@/views/DashboardView.vue'),
+          meta: { title: 'Dashboard' },
+          component: () => import('@/pages/DashboardPage.vue'),
         },
         {
-          path: 'expenses',
-          name: 'expenses',
-          component: () => import('@/views/ExpensesView.vue'),
+          path: '/despesas',
+          name: 'despesas',
+          meta: { title: 'Despesas' },
+          component: () => import('@/pages/ExpensesPage.vue'),
         },
         {
-          path: 'chat',
-          name: 'chat',
-          component: () => import('@/views/ChatView.vue'),
+          path: '/nova-entrada',
+          name: 'nova-entrada',
+          meta: { title: 'Nova Entrada' },
+          component: () => import('@/pages/NaturalEntryPage.vue'),
         },
         {
-          path: 'profile',
-          name: 'profile',
-          component: () => import('@/views/ProfileView.vue'),
+          path: '/configuracoes',
+          name: 'configuracoes',
+          meta: { title: 'Configuracoes' },
+          component: () => import('@/pages/SettingsPage.vue'),
         },
       ],
     },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('@/views/NotFoundView.vue'),
-    },
   ],
-})
-
-router.beforeEach(async (to) => {
-  const authStore = useAuthStore()
-
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    return { path: '/login', query: { redirect: to.fullPath } }
-  }
-
-  if (to.meta.guestOnly && authStore.isAuthenticated) {
-    return { path: '/dashboard' }
-  }
-
-  return true
 })
 
 export default router

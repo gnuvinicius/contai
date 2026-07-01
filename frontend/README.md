@@ -1,5 +1,24 @@
-# Vue 3 + TypeScript + Vite
+# ContaI Frontend
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Interface SaaS de gestao financeira pessoal desenvolvida com:
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+- Vue 3
+- TypeScript
+- Vite
+- Vue Router
+- Pinia
+- Tailwind CSS
+- shadcn-vue
+- Lucide Icons
+
+## Scripts
+
+- `npm run dev`: inicia ambiente local
+- `npm run build`: type-check + build de producao
+- `npm run preview`: visualiza build local
+
+## Telas
+
+- Dashboard com KPIs, grafico de barras, grafico de distribuicao e ultimas movimentacoes
+- Entrada por linguagem natural com processamento mock, loading, revisao e salvamento
+- Listagem de despesas com busca em tempo real, filtros, ordenacao, paginacao e acoes por linha

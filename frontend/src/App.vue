@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 </script>
 
 <template>
-  <RouterView />
-  <AppToaster rich-colors position="top-right" :visible-toasts="4" />
+  <TooltipProvider>
+    <RouterView />
+    <Toaster rich-colors position="top-right" />
+  </TooltipProvider>
 </template>
