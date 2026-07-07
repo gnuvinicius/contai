@@ -2,7 +2,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import type { Transaction } from '@/types/finance'
+import type { Transaction } from '@/types/transactions'
 import { currency, dateLabel } from '@/utils/format'
 import { ArrowDownCircleIcon, ArrowUpCircleIcon } from '@lucide/vue'
 

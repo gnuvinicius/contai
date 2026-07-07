@@ -7,6 +7,6 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 <template>
   <TooltipProvider>
     <RouterView />
-    <Toaster rich-colors position="top-right" />
+    <Toaster theme="dark" rich-colors position="top-right" />
   </TooltipProvider>
 </template>

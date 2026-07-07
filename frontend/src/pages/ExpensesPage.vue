@@ -45,8 +45,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { useFinanceStore } from '@/stores/finance'
-import type { ParsedTransactionInput, Transaction } from '@/types/finance'
+import { useTransactionsStore } from '@/stores/transactions'
+import type { ParsedTransactionInput, Transaction } from '@/types/transactions'
 import { fromDateTimeLocal, toDateTimeLocal } from '@/utils/datetime'
 import { currency, dateLabel } from '@/utils/format'
 import {
@@ -60,7 +60,7 @@ import {
 import { computed, onMounted, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
-const finance = useFinanceStore()
+const transactionsStore = useTransactionsStore()
 const loading = ref(true)
 
 function isIncome(type: string) {
@@ -68,7 +68,7 @@ function isIncome(type: string) {
 }
 
 onMounted(async () => {
-  await finance.loadTransactions()
+  await transactionsStore.loadTransactions(true)
   loading.value = false
 })
 
@@ -109,17 +109,17 @@ const editForm = reactive<EditForm>({
 })
 
 const years = computed(() => {
-  const set = new Set(finance.transactions.map((item) => String(new Date(item.dueDate).getFullYear())))
+  const set = new Set(transactionsStore.transactions.map((item) => String(new Date(item.dueDate).getFullYear())))
   return [String(new Date().getFullYear()), ...set]
 })
 
 const paymentMethods = computed(() => {
-  const set = new Set(finance.transactions.map((item) => item.paymentMethod ?? 'Nao informado'))
+  const set = new Set(transactionsStore.transactions.map((item) => item.paymentMethod ?? 'Nao informado'))
   return ['Todos', ...set]
 })
 
 const filtered = computed(() => {
-  return finance.sortedTransactions.filter((item) => {
+  return transactionsStore.sortedTransactions.filter((item) => {
     const matchDescription = item.description.toLowerCase().includes(filters.description.toLowerCase())
     const matchYear = String(new Date(item.dueDate).getFullYear()) === filters.year
     const matchType = filters.type === 'Todos' || item.type === filters.type
@@ -178,12 +178,13 @@ async function saveEdit() {
   if (!selected.value) return
 
   try {
-    await finance.updateTransaction(selected.value.id, {
+    await transactionsStore.updateTransaction(selected.value.id, {
       ...editForm,
       merchantName: editForm.merchantName.trim() || null,
       dueDate: fromDateTimeLocal(editForm.dueDate),
     })
     editOpen.value = false
+    transactionsStore.loadTransactions(true)
     toast.success('Movimentacao atualizada com sucesso.')
   } catch {
     toast.error('Nao foi possivel atualizar a movimentacao.')
@@ -199,7 +200,7 @@ async function confirmDelete() {
   if (!selected.value) return
 
   try {
-    await finance.removeTransaction(selected.value.id)
+    await transactionsStore.removeTransaction(selected.value.id)
     deleteOpen.value = false
     toast.success('Movimentacao excluida.')
   } catch {
@@ -264,7 +265,7 @@ async function confirmDelete() {
       </Popover>
     </div>
 
-    <div v-if="loading || finance.loading" class="space-y-2">
+    <div v-if="loading || transactionsStore.loading" class="space-y-2">
       <Skeleton v-for="n in 6" :key="n" class="h-12 w-full rounded-xl" />
     </div>
 

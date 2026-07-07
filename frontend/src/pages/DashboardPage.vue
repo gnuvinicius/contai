@@ -5,21 +5,21 @@ import PieChartCard from '@/components/dashboard/PieChartCard.vue'
 import RecentTransactionsCard from '@/components/dashboard/RecentTransactionsCard.vue'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuthStore } from '@/stores/auth'
-import { useFinanceStore } from '@/stores/finance'
+import { useTransactionsStore } from '@/stores/transactions'
 import { currency } from '@/utils/format'
 import { PiggyBankIcon, TrendingDownIcon, TrendingUpIcon, WalletIcon } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 
 const auth = useAuthStore()
-const finance = useFinanceStore()
+const transactionsStore = useTransactionsStore()
 const loading = ref(true)
 
 onMounted(async () => {
-  await finance.loadTransactions()
+  await transactionsStore.loadTransactions()
   loading.value = false
 })
 
-const latestTransactions = computed(() => finance.sortedTransactions.slice(0, 8))
+const latestTransactions = computed(() => transactionsStore.sortedTransactions.slice(0, 8))
 </script>
 
 <template>
@@ -29,29 +29,29 @@ const latestTransactions = computed(() => finance.sortedTransactions.slice(0, 8)
       <h2 class="mt-1 text-2xl font-semibold tracking-tight">Visao geral financeira</h2>
     </div>
 
-    <div v-if="loading || finance.loading" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div v-if="loading || transactionsStore.loading" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Skeleton v-for="n in 4" :key="n" class="h-32 rounded-2xl" />
     </div>
 
     <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard title="Saldo Atual" :value="currency(finance.totalBalance)" hint="Consolidado geral" :icon="WalletIcon" />
+      <KpiCard title="Saldo Atual" :value="currency(transactionsStore.totalBalance)" hint="Consolidado geral" :icon="WalletIcon" />
       <KpiCard
         title="Receitas do mes"
-        :value="currency(finance.monthRevenue)"
+        :value="currency(transactionsStore.monthRevenue)"
         hint="Entradas no periodo"
         :icon="TrendingUpIcon"
         tone="success"
       />
       <KpiCard
         title="Despesas do mes"
-        :value="currency(finance.monthExpense)"
+        :value="currency(transactionsStore.monthExpense)"
         hint="Saidas no periodo"
         :icon="TrendingDownIcon"
         tone="danger"
       />
       <KpiCard
         title="Economia do mes"
-        :value="currency(finance.monthlySavings)"
+        :value="currency(transactionsStore.monthlySavings)"
         hint="Receitas - Despesas"
         :icon="PiggyBankIcon"
         tone="warning"
@@ -60,8 +60,8 @@ const latestTransactions = computed(() => finance.sortedTransactions.slice(0, 8)
 
     <div class="grid gap-4 xl:grid-cols-[2fr_1fr]">
       <div class="space-y-4">
-        <BarChartCard :bars="finance.monthlyBars" />
-        <PieChartCard :values="finance.expensesByPaymentMethod" />
+        <BarChartCard :bars="transactionsStore.monthlyBars" />
+        <PieChartCard :values="transactionsStore.expensesByPaymentMethod" />
       </div>
       <RecentTransactionsCard :items="latestTransactions" />
     </div>

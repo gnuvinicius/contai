@@ -87,7 +87,6 @@ class TransactionUpdateSerializer(StrictModelSerializer):
             "description",
             "merchant_name",
             "amount",
-            "total_amount",
             "is_installment",
             "installment",
             "installment_total",

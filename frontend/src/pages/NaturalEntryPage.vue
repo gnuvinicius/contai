@@ -2,16 +2,17 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { toast } from '@/components/ui/sonner'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { ApiError } from '@/services/api'
 import { parseNaturalLanguageEntry } from '@/services/nlp'
-import { useFinanceStore } from '@/stores/finance'
-import type { ExtractedTransactionResponse } from '@/types/finance'
+import { useTransactionsStore } from '@/stores/transactions'
+import type { ExtractedTransactionResponse } from '@/types/transactions'
 import { CheckCircle2Icon, LoaderCircleIcon, SparklesIcon } from '@lucide/vue'
 import { computed, ref } from 'vue'
-import { toast } from 'vue-sonner'
 
-const finance = useFinanceStore()
+const transactionsStore = useTransactionsStore()
 
 const examples = [
   'Hoje gastei R$ 120 no supermercado usando Pix.',
@@ -42,22 +43,52 @@ function applyExample(text: string) {
   prompt.value = text
 }
 
+function getBackendErrorDescription(error: unknown) {
+  if (!(error instanceof ApiError)) {
+    return 'Nao foi possivel processar a entrada agora.'
+  }
+
+  if (error.status === 500 && error.body && typeof error.body === 'object') {
+    const maybeDetail = 'detail' in error.body ? error.body.detail : null
+    const maybeType = 'error' in error.body ? error.body.error : null
+
+    if (typeof maybeDetail === 'string' && typeof maybeType === 'string') {
+      return `${maybeDetail} (${maybeType})`
+    }
+
+    if (typeof maybeDetail === 'string') {
+      return maybeDetail
+    }
+  }
+
+  return error.message || 'Nao foi possivel processar a entrada agora.'
+}
+
 async function processEntry() {
   if (!prompt.value.trim()) {
-    toast.error('Descreva uma movimentacao antes de processar.')
+    toast.info('Descreva uma movimentacao antes de processar.')
     return
   }
 
   parsing.value = true
   created.value = null
+  const loadingToastId = toast.loading('Enviando mensagem...', {
+    description: 'Estamos interpretando sua entrada em linguagem natural.',
+  })
 
   try {
     const result = await parseNaturalLanguageEntry(prompt.value)
     created.value = result
-    await finance.loadTransactions(true)
-    toast.success('Movimentacao criada com sucesso.')
-  } catch {
-    toast.error('Nao foi possivel processar a entrada agora.')
+    await transactionsStore.loadTransactions(true)
+    toast.dismiss(loadingToastId)
+    toast.success('Mensagem enviada com sucesso.', {
+      description: 'A movimentacao foi criada e a lista foi atualizada.',
+    })
+  } catch (error) {
+    toast.dismiss(loadingToastId)
+    toast.error('Erro ao enviar mensagem.', {
+      description: getBackendErrorDescription(error),
+    })
   } finally {
     parsing.value = false
   }
@@ -126,7 +157,7 @@ function newEntry() {
         <Separator class="bg-border/80" />
         <CardFooter class="justify-end gap-2 pt-4">
           <Button variant="outline" @click="newEntry">Nova entrada</Button>
-          <Button @click="finance.loadTransactions(true).then(() => toast.success('Lista atualizada.'))">Recarregar lista</Button>
+          <Button @click="transactionsStore.loadTransactions(true).then(() => toast.success('Lista atualizada.'))">Recarregar lista</Button>
         </CardFooter>
       </Card>
     </Transition>

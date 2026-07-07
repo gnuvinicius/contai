@@ -1,6 +1,6 @@
 import { ApiError, apiRequest } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
-import type { ParsedTransactionInput, Transaction } from '@/types/finance'
+import type { ParsedTransactionInput, Transaction } from '@/types/transactions'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -95,7 +95,7 @@ async function requestWithAuthRetry<T>(request: () => Promise<T>) {
   }
 }
 
-export const useFinanceStore = defineStore('finance', () => {
+export const useTransactionsStore = defineStore('transactions', () => {
   const transactions = ref<Transaction[]>([])
   const loading = ref(false)
   const loaded = ref(false)
@@ -176,7 +176,7 @@ export const useFinanceStore = defineStore('finance', () => {
 
     try {
       const collected: Transaction[] = []
-      let next: string | null = '/transactions/?page=1'
+      let next: string | null = '/transactions/transactions?page=1'
 
       while (next) {
         const response = await requestWithAuthRetry(() => apiRequest<TransactionApiResponse>(next as string))
@@ -212,8 +212,8 @@ export const useFinanceStore = defineStore('finance', () => {
 
   async function updateTransaction(id: number, payload: ParsedTransactionInput) {
     const response = await requestWithAuthRetry(() =>
-      apiRequest<TransactionApiResponse['results'][number]>(`/transactions/${id}/`, {
-        method: 'PATCH',
+      apiRequest<TransactionApiResponse['results'][number]>(`/transactions/transactions/${id}/`, {
+        method: 'PUT',
         body: JSON.stringify(normalizePayload(payload)),
       }),
     )

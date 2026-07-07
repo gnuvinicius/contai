@@ -11,7 +11,5 @@ class StrictModelSerializer(serializers.ModelSerializer):
         unknown_fields = set(self.initial_data) - set(self.fields)
 
         if unknown_fields:
-            raise serializers.ValidationError({
-                field: "Unknown field" for field in unknown_fields
-            })
+            raise serializers.ValidationError(dict.fromkeys(unknown_fields, "Unknown field"))
         return super().validate(attrs)

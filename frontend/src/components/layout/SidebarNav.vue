@@ -24,7 +24,7 @@ const currentPath = computed(() => route.path)
       </div>
       <div>
         <p class="text-sm font-semibold tracking-wide text-foreground">ContaI</p>
-        <p class="text-xs text-muted-foreground">Finance AI</p>
+        <p class="text-xs text-muted-foreground">Transactions AI</p>
       </div>
     </div>
 

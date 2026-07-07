@@ -4,17 +4,17 @@ import TopBar from '@/components/layout/TopBar.vue'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { useAuthStore } from '@/stores/auth'
-import { useFinanceStore } from '@/stores/finance'
+import { useTransactionsStore } from '@/stores/transactions'
 import { MenuIcon } from '@lucide/vue'
 import { onMounted, ref } from 'vue'
 
 const open = ref(false)
 const auth = useAuthStore()
-const finance = useFinanceStore()
+const transactionsStore = useTransactionsStore()
 
 onMounted(() => {
   if (auth.isAuthenticated) {
-    finance.loadTransactions().catch(() => undefined)
+    transactionsStore.loadTransactions().catch(() => undefined)
   }
 })
 </script>
