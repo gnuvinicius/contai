@@ -55,7 +55,7 @@ function logout() {
       <div class="hidden items-center gap-2 lg:flex">
         <div class="relative w-72">
           <SearchIcon class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input class="h-9 pl-9" placeholder="Buscar movimentacoes..." />
+          <Input class="h-9 pl-9" placeholder="Buscar movimentações..." />
         </div>
         <button
           class="inline-flex size-9 items-center justify-center rounded-xl border border-border bg-secondary text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -87,7 +87,7 @@ function logout() {
             <UserRoundIcon class="mr-2 size-4" /> Perfil
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Settings2Icon class="mr-2 size-4" /> Preferencias
+            <Settings2Icon class="mr-2 size-4" /> Preferências
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem class="text-destructive" @click="logout">

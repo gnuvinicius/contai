@@ -26,7 +26,7 @@ const latestTransactions = computed(() => transactionsStore.sortedTransactions.s
   <section class="space-y-6">
     <div>
       <p class="text-sm text-muted-foreground">Ola, {{ auth.displayName }}.</p>
-      <h2 class="mt-1 text-2xl font-semibold tracking-tight">Visao geral financeira</h2>
+      <h2 class="mt-1 text-2xl font-semibold tracking-tight">Visão geral financeira</h2>
     </div>
 
     <div v-if="loading || transactionsStore.loading" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -36,21 +36,21 @@ const latestTransactions = computed(() => transactionsStore.sortedTransactions.s
     <div v-else class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard title="Saldo Atual" :value="currency(transactionsStore.totalBalance)" hint="Consolidado geral" :icon="WalletIcon" />
       <KpiCard
-        title="Receitas do mes"
+        title="Receitas do mês"
         :value="currency(transactionsStore.monthRevenue)"
-        hint="Entradas no periodo"
+        hint="Entradas no período"
         :icon="TrendingUpIcon"
         tone="success"
       />
       <KpiCard
-        title="Despesas do mes"
+        title="Despesas do mês"
         :value="currency(transactionsStore.monthExpense)"
-        hint="Saidas no periodo"
+        hint="Saídas no período"
         :icon="TrendingDownIcon"
         tone="danger"
       />
       <KpiCard
-        title="Economia do mes"
+        title="Economia do mês"
         :value="currency(transactionsStore.monthlySavings)"
         hint="Receitas - Despesas"
         :icon="PiggyBankIcon"

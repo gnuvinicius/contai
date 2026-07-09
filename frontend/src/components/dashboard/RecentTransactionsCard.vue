@@ -18,7 +18,7 @@ defineProps<{
 <template>
   <Card class="h-full border-border/70 bg-card/80">
     <CardHeader>
-      <CardTitle class="text-sm font-medium text-muted-foreground">Ultimas movimentacoes</CardTitle>
+      <CardTitle class="text-sm font-medium text-muted-foreground">Últimas movimentações</CardTitle>
     </CardHeader>
     <CardContent>
       <ScrollArea class="h-[360px] pr-3">

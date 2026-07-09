@@ -38,16 +38,16 @@ async function submit() {
       <div class="grid w-full gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <Card class="order-2 border-white/10 bg-slate-950/90 text-slate-100 shadow-2xl shadow-black/40 lg:order-1">
           <CardHeader class="space-y-2">
-            <CardTitle class="text-2xl">Criar usuario</CardTitle>
+            <CardTitle class="text-2xl">Criar usuário</CardTitle>
             <CardDescription class="text-slate-400">
-              O backend ja adiciona o novo usuario ao grupo <span class="font-medium text-emerald-300">user</span>.
+              O backend já adiciona o novo usuário ao grupo <span class="font-medium text-emerald-300">user</span>.
             </CardDescription>
           </CardHeader>
           <CardContent class="space-y-4">
             <div class="grid gap-4 sm:grid-cols-2">
               <div class="space-y-2">
                 <Label for="firstName">Nome</Label>
-                <Input id="firstName" v-model="form.first_name" autocomplete="given-name" placeholder="Joao" />
+                <Input id="firstName" v-model="form.first_name" autocomplete="given-name" placeholder="João" />
               </div>
 
               <div class="space-y-2">
@@ -57,7 +57,7 @@ async function submit() {
             </div>
 
             <div class="space-y-2">
-              <Label for="username">Usuario</Label>
+              <Label for="username">Usuário</Label>
               <Input id="username" v-model="form.username" autocomplete="username" placeholder="joao_silva" />
             </div>
 

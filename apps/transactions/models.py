@@ -10,6 +10,20 @@ class Status(models.TextChoices):
     INACTIVE = "inactive", "Inactive"
 
 
+class TransactionType(models.TextChoices):
+    EXPENSE = "expense", "Expense"
+    INCOME = "income", "Income"
+
+
+class PaymentMethod(models.TextChoices):
+    CREDIT_CARD = "credit_card", "Credit Card"
+    DEBIT_CARD = "debit_card", "Debit Card"
+    CASH = "cash", "Cash"
+    BANK_TRANSFER = "bank_transfer", "Bank Transfer"
+    PIX = "pix", "PIX"
+    OTHER = "other", "Other"
+
+
 class Transaction(models.Model):
     user = models.ForeignKey(
         User,
@@ -18,8 +32,12 @@ class Transaction(models.Model):
         db_index=True,
     )
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.ACTIVE)
-    type = models.CharField(max_length=50)
-    payment_method = models.CharField(null=True, blank=True)
+    type = models.CharField(
+        max_length=50, choices=TransactionType.choices, default=TransactionType.EXPENSE
+    )
+    payment_method = models.CharField(
+        max_length=50, choices=PaymentMethod.choices, null=True, blank=True
+    )
     description = models.TextField()
     merchant_name = models.CharField(max_length=255, null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)

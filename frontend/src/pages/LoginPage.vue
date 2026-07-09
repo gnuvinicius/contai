@@ -39,17 +39,8 @@ async function submit() {
           <div class="space-y-4">
             <p class="text-sm uppercase tracking-[0.35em] text-emerald-300/80">Contai Service</p>
             <h1 class="max-w-lg text-4xl font-semibold tracking-tight text-white md:text-5xl">
-              Entre para acompanhar suas movimentacoes reais.
+              Entre para acompanhar suas movimentações reais.
             </h1>
-            <p class="max-w-xl text-sm leading-6 text-slate-300 md:text-base">
-              A interface conversa com a API, usa JWT e respeita o grupo <span class="font-medium text-emerald-300">user</span> criado no backend.
-            </p>
-          </div>
-
-          <div class="mt-10 grid gap-4 text-sm text-slate-300 sm:grid-cols-3">
-            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">Login JWT</div>
-            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">CRUD de transacoes</div>
-            <div class="rounded-2xl border border-white/10 bg-black/20 p-4">Permissoes por grupo user</div>
           </div>
         </section>
 
@@ -78,8 +69,8 @@ async function submit() {
             </Button>
 
             <p class="text-sm text-slate-400">
-              Ainda nao tem conta?
-              <RouterLink class="text-emerald-300 underline-offset-4 hover:underline" to="/register">Criar usuario</RouterLink>
+              Ainda não tem conta?
+              <RouterLink class="text-emerald-300 underline-offset-4 hover:underline" to="/register">Criar usuário</RouterLink>
             </p>
           </CardContent>
         </Card>

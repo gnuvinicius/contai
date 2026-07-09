@@ -19,15 +19,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Separator } from '@/components/ui/separator'
 import {
     Select,
     SelectContent,
@@ -51,7 +46,6 @@ import { fromDateTimeLocal, toDateTimeLocal } from '@/utils/datetime'
 import { currency, dateLabel } from '@/utils/format'
 import {
     ArrowUpDownIcon,
-    EyeIcon,
     FilterIcon,
     PencilLineIcon,
     SearchIcon,
@@ -191,6 +185,12 @@ async function saveEdit() {
   }
 }
 
+function convertPaymentType(paymentMethod: string | null | undefined) {
+  if (paymentMethod === 'debit') return 'débito'
+  if (paymentMethod === 'credit') return 'crédito'
+  return paymentMethod ?? 'Não informado'
+}
+
 function askDelete(item: Transaction) {
   selected.value = item
   deleteOpen.value = true
@@ -202,9 +202,9 @@ async function confirmDelete() {
   try {
     await transactionsStore.removeTransaction(selected.value.id)
     deleteOpen.value = false
-    toast.success('Movimentacao excluida.')
+    toast.success('Movimentação excluída.')
   } catch {
-    toast.error('Nao foi possivel excluir a movimentacao.')
+    toast.error('Não foi possível excluir a movimentação.')
   }
 }
 </script>
@@ -214,7 +214,7 @@ async function confirmDelete() {
     <div class="flex flex-wrap items-center gap-2">
       <div class="relative min-w-[220px] flex-1">
         <SearchIcon class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input v-model="filters.description" class="pl-9" placeholder="Buscar por descricao" />
+        <Input v-model="filters.description" class="pl-9" placeholder="Buscar por descrição" />
       </div>
 
       <Popover>
@@ -257,7 +257,7 @@ async function confirmDelete() {
                 <SelectValue placeholder="Forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem v-for="method in paymentMethods" :key="method" :value="method">{{ method }}</SelectItem>
+                <SelectItem v-for="method in paymentMethods" :key="method" :value="method">{{ convertPaymentType(method) }}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -277,7 +277,7 @@ async function confirmDelete() {
               <button class="inline-flex items-center gap-1" @click="sortBy('dueDate')">Data <ArrowUpDownIcon class="size-3.5" /></button>
             </TableHead>
             <TableHead>
-              <button class="inline-flex items-center gap-1" @click="sortBy('description')">Descricao <ArrowUpDownIcon class="size-3.5" /></button>
+              <button class="inline-flex items-center gap-1" @click="sortBy('description')">Descrição <ArrowUpDownIcon class="size-3.5" /></button>
             </TableHead>
             <TableHead>
               <button class="inline-flex items-center gap-1" @click="sortBy('merchantName')">Estabelecimento <ArrowUpDownIcon class="size-3.5" /></button>
@@ -289,11 +289,15 @@ async function confirmDelete() {
               <button class="inline-flex items-center gap-1" @click="sortBy('amount')">Valor <ArrowUpDownIcon class="size-3.5" /></button>
             </TableHead>
             <TableHead>Forma de pagamento</TableHead>
-            <TableHead class="w-[80px] text-right">Acoes</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="item in paginated" :key="item.id" class="transition-colors hover:bg-secondary/70">
+          <TableRow
+            v-for="item in paginated"
+            :key="item.id"
+            class="cursor-pointer transition-colors hover:bg-secondary/70"
+            @click="openView(item)"
+          >
             <TableCell>{{ dateLabel(item.dueDate) }}</TableCell>
             <TableCell>{{ item.description }}</TableCell>
             <TableCell>{{ item.merchantName || '-' }}</TableCell>
@@ -303,19 +307,7 @@ async function confirmDelete() {
             <TableCell class="font-medium" :class="isIncome(item.type) ? 'text-emerald-400' : 'text-red-400'">
               {{ isIncome(item.type) ? '+' : '-' }}{{ currency(item.amount) }}
             </TableCell>
-            <TableCell>{{ item.paymentMethod || '-' }}</TableCell>
-            <TableCell class="text-right">
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button size="icon-sm" variant="ghost">...</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem @click="openView(item)"><EyeIcon class="mr-2 size-4" /> Ver</DropdownMenuItem>
-                  <DropdownMenuItem @click="openEdit(item)"><PencilLineIcon class="mr-2 size-4" /> Editar</DropdownMenuItem>
-                  <DropdownMenuItem class="text-destructive" @click="askDelete(item)"><Trash2Icon class="mr-2 size-4" /> Excluir</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
+            <TableCell>{{ convertPaymentType(item.paymentMethod) }}</TableCell>
           </TableRow>
         </TableBody>
       </Table>
@@ -327,14 +319,14 @@ async function confirmDelete() {
       </div>
 
       <div v-if="paginated.length === 0" class="px-4 pb-4">
-        <TableEmpty>Sem movimentacoes para os filtros atuais.</TableEmpty>
+        <TableEmpty>Sem movimentações para os filtros atuais.</TableEmpty>
       </div>
     </div>
 
     <Dialog v-model:open="viewOpen">
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Detalhes da movimentacao</DialogTitle>
+          <DialogTitle>Detalhes da movimentação</DialogTitle>
           <DialogDescription>{{ selected?.description }}</DialogDescription>
         </DialogHeader>
         <div class="space-y-2 text-sm">
@@ -342,15 +334,33 @@ async function confirmDelete() {
           <p><strong>Valor:</strong> {{ selected && currency(selected.amount) }}</p>
           <p><strong>Estabelecimento:</strong> {{ selected?.merchantName || '-' }}</p>
           <p><strong>Tipo:</strong> {{ selected?.type }}</p>
-          <p><strong>Pagamento:</strong> {{ selected?.paymentMethod || '-' }}</p>
+          <p><strong>Pagamento:</strong> {{ convertPaymentType(selected?.paymentMethod) }}</p>
         </div>
+        <DialogFooter class="justify-end gap-2 pt-4">
+          <Button
+            variant="outline"
+            :disabled="!selected"
+            @click="selected && (viewOpen = false, openEdit(selected))"
+          >
+            <PencilLineIcon class="mr-2 size-4" />
+            Editar
+          </Button>
+          <Button
+            variant="destructive"
+            :disabled="!selected"
+            @click="selected && (viewOpen = false, askDelete(selected))"
+          >
+            <Trash2Icon class="mr-2 size-4" />
+            Excluir
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
 
     <Dialog v-model:open="editOpen">
       <DialogContent class="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Editar movimentacao</DialogTitle>
+          <DialogTitle>Editar movimentação</DialogTitle>
           <DialogDescription>Atualize os campos permitidos pela API.</DialogDescription>
         </DialogHeader>
         <div class="grid gap-4 md:grid-cols-2">
@@ -360,7 +370,7 @@ async function confirmDelete() {
           </div>
 
           <div class="space-y-2">
-            <Label>Descricao</Label>
+            <Label>Descrição</Label>
             <Input v-model="editForm.description" />
           </div>
 
@@ -403,9 +413,9 @@ async function confirmDelete() {
     <AlertDialog v-model:open="deleteOpen">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Excluir movimentacao?</AlertDialogTitle>
+          <AlertDialogTitle>Excluir movimentação?</AlertDialogTitle>
           <AlertDialogDescription>
-            Esta acao muda o status no backend e remove o item da listagem.
+            Esta ação muda o status no backend e remove o item da listagem.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

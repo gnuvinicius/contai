@@ -11,6 +11,12 @@ const palette = ['#4F46E5', '#22C55E', '#F59E0B', '#EF4444', '#64748B', '#0EA5E9
 
 const total = computed(() => props.values.reduce((acc, item) => acc + item.value, 0) || 1)
 
+function convertPaymentType(paymentMethod: string | null | undefined) {
+  if (paymentMethod === 'debit') return 'débito'
+  if (paymentMethod === 'credit') return 'crédito'
+  return paymentMethod ?? 'Não informado'
+}
+
 const gradient = computed(() => {
   let cursor = 0
   const slices = props.values.map((item, idx) => {
@@ -28,7 +34,7 @@ const gradient = computed(() => {
 <template>
   <Card class="border-border/70 bg-card/80">
     <CardHeader>
-      <CardTitle class="text-sm font-medium text-muted-foreground">Distribuicao por forma de pagamento</CardTitle>
+      <CardTitle class="text-sm font-medium text-muted-foreground">Distribuição por forma de pagamento</CardTitle>
     </CardHeader>
     <CardContent class="space-y-6">
       <div class="mx-auto size-44 rounded-full border border-border/70" :style="{ background: gradient }" />
@@ -37,7 +43,7 @@ const gradient = computed(() => {
         <div v-for="(item, idx) in values" :key="item.label" class="flex items-center justify-between text-sm">
           <div class="flex items-center gap-2">
             <span class="size-2.5 rounded-full" :style="{ backgroundColor: palette[idx % palette.length] }" />
-            <span class="text-muted-foreground">{{ item.label }}</span>
+            <span class="text-muted-foreground">{{ convertPaymentType(item.label) }}</span>
           </div>
           <span class="font-medium text-foreground">{{ currency(item.value) }}</span>
         </div>
